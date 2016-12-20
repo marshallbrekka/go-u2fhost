@@ -1,0 +1,6 @@
+hash: a22251d62a65e7dd956365699b5ee4187facbe5e4a0695fa6bbff3435ac123f5
+updated: 2016-10-06T10:09:28.80986557-07:00
+imports:
+- name: github.com/marshallbrekka/hid
+  version: 0a6d85494aa37593bb5bfc0e3840d149a19f8319
+testImports: []

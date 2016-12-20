@@ -1,0 +1,3 @@
+package: github.com/marshallbrekka/u2f-host
+import:
+- package: github.com/marshallbrekka/hid
