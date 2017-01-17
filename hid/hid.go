@@ -6,8 +6,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/GeertJohan/go.hid"
 	log "github.com/Sirupsen/logrus"
+	"github.com/marshallbrekka/go.hid"
 	"io"
 )
 
@@ -40,6 +40,9 @@ func Devices() []*HidDevice {
 	u2fDevices := []*HidDevice{}
 	devices, _ := hid.Enumerate(0x0, 0x0)
 	for _, device := range devices {
+		// need to add some custom code to get hid usage from linux.
+		// use the firefox u2f extension codebase as a reference.
+		// https://github.com/prefiks/u2f4moz/blob/master/c_src/libu2f-host/devs.c#L117-L142
 		if device.UsagePage == 0xf1d0 && device.Usage == 1 {
 			u2fDevices = append(u2fDevices, newHidDevice(newRawHidDevice(device)))
 		}

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	u2f "github.com/marshallbrekka/u2f-host"
+	u2f "github.com/marshallbrekka/u2fhost"
 	"github.com/spf13/cobra"
 	"time"
 )

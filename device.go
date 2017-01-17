@@ -6,27 +6,32 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/marshallbrekka/u2f-host/hid"
+	"github.com/marshallbrekka/u2fhost/hid"
 )
 
-//APDU Instructions
-const U2F_REGISTER uint8 = 0x01           // Registration command
-const U2F_AUTHENTICATE uint8 = 0x02       // Authenticate/sign command
-const U2F_VERSION uint8 = 0x03            // Read version string command
-const U2F_CHECK_REGISTER uint8 = 0x04     // Registration command that incorporates checking key handles
-const U2F_AUTHENTICATE_BATCH uint8 = 0x05 // Authenticate/sign command for a batch of key handles
+// APDU Commands
+const (
+	u2fCommandRegister          uint8 = 0x01 // Registration command
+	u2fCommandAuthenticate      uint8 = 0x02 // Authenticate/sign command
+	u2fCommandVersion           uint8 = 0x03 // Read version string command
+	u2fCommandCheckRegister     uint8 = 0x04 // Registration command that incorporates checking key handles
+	u2fCommandAuthenticateBatch uint8 = 0x05 // Authenticate/sign command for a batch of key handles
+)
 
-//APDU Response Codes
-const SW_NO_ERROR uint16 = 0x9000
-const SW_WRONG_DATA uint16 = 0x6A80
-const SW_CONDITIONS_NOT_SATISFIED uint16 = 0x6985
-const SW_COMMAND_NOT_ALLOWED uint16 = 0x6986
-const SW_INS_NOT_SUPPORTED uint16 = 0x6D00
+// APDU Response Codes
+const (
+	u2fStatusNoError                uint16 = 0x9000
+	u2fStatusWrongData              uint16 = 0x6A80
+	u2fStatusConditionsNotSatisfied uint16 = 0x6985
+	u2fStatusCommandNotAllowed      uint16 = 0x6986
+	u2fStatusInsNotSupported        uint16 = 0x6D00
+)
 
 // Authentication control byte
-const AUTH_ENFORCE uint8 = 0x03    // Enforce user presence and sign
-const AUTH_CHECK_ONLY uint8 = 0x07 // Check only
-const AUTH_FLAG_TUP uint8 = 0x01   // Test of user presence set
+const (
+	u2fAuthEnforce   uint8 = 0x03 // Enforce user presence and sign
+	u2fAuthCheckOnly uint8 = 0x07 // Check only
+)
 
 type HidDevice struct {
 	hidDevice hid.Device
@@ -56,56 +61,57 @@ func (dev *HidDevice) Close() {
 }
 
 func (dev *HidDevice) Version() (string, error) {
-	status, response, err := dev.hidDevice.SendAPDU(U2F_VERSION, 0, 0, []byte{})
+	status, response, err := dev.hidDevice.SendAPDU(u2fCommandVersion, 0, 0, []byte{})
 	if err != nil {
 		return "", err
 	}
-	if status != SW_NO_ERROR {
+	if status != u2fStatusNoError {
 		return "", u2ferror(status)
 	}
 	return string(response), nil
 }
 
-func (dev *HidDevice) Register(req *RegisterRequest) (uint16, *RegisterResponse, error) {
+func (dev *HidDevice) Register(req *RegisterRequest) (*RegisterResponse, error) {
 	return dev.register(req, nil)
 }
 
-func (dev *HidDevice) RegisterWithJWK(req *RegisterRequest, jsonWebKey *JSONWebKey) (uint16, *RegisterResponse, error) {
+func (dev *HidDevice) RegisterWithJWK(req *RegisterRequest, jsonWebKey *JSONWebKey) (*RegisterResponse, error) {
 	return dev.register(req, jsonWebKey)
 }
 
-func (dev *HidDevice) RegisterWithJWKString(req *RegisterRequest, jsonWebKey string) (uint16, *RegisterResponse, error) {
+func (dev *HidDevice) RegisterWithJWKString(req *RegisterRequest, jsonWebKey string) (*RegisterResponse, error) {
 	return dev.register(req, jsonWebKey)
 }
 
-func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (uint16, *AuthenticateResponse, error) {
+func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateResponse, error) {
 	return dev.authenticate(req, nil)
 }
 
-func (dev *HidDevice) AuthenticateWithJWK(req *AuthenticateRequest, jsonWebKey *JSONWebKey) (uint16, *AuthenticateResponse, error) {
+func (dev *HidDevice) AuthenticateWithJWK(req *AuthenticateRequest, jsonWebKey *JSONWebKey) (*AuthenticateResponse, error) {
 	return dev.authenticate(req, jsonWebKey)
 }
 
-func (dev *HidDevice) AuthenticateWithJWKString(req *AuthenticateRequest, jsonWebKey string) (uint16, *AuthenticateResponse, error) {
+func (dev *HidDevice) AuthenticateWithJWKString(req *AuthenticateRequest, jsonWebKey string) (*AuthenticateResponse, error) {
 	return dev.authenticate(req, jsonWebKey)
 }
 
-func (dev *HidDevice) register(req *RegisterRequest, jsonWebKey interface{}) (uint16, *RegisterResponse, error) {
+func (dev *HidDevice) register(req *RegisterRequest, jsonWebKey interface{}) (*RegisterResponse, error) {
 	clientData, request := registerRequest(req, jsonWebKey)
 	var p1 uint8 = 0x03
 	var p2 uint8 = 0
-	status, response, err := dev.hidDevice.SendAPDU(U2F_REGISTER, p1, p2, request)
+	status, response, err := dev.hidDevice.SendAPDU(u2fCommandRegister, p1, p2, request)
 	var registerResponse *RegisterResponse
-	if err == nil && status == SW_NO_ERROR {
-		keyLength := response[66]
-		keyContents := response[67 : 67+keyLength]
-		log.Debugf("Key Handle %s", websafeEncode(keyContents))
-		registerResponse = &RegisterResponse{
-			RegistrationData: websafeEncode(response),
-			ClientData:       websafeEncode(clientData),
+	if err == nil {
+		if status == u2fSatusNoError {
+			registerResponse = &RegisterResponse{
+				RegistrationData: websafeEncode(response),
+				ClientData:       websafeEncode(clientData),
+			}
+		} else {
+			err = u2ferror(status)
 		}
 	}
-	return status, registerResponse, err
+	return registerResponse, err
 }
 
 func registerRequest(req *RegisterRequest, jsonWebKey interface{}) ([]byte, []byte) {
@@ -123,22 +129,26 @@ func registerRequest(req *RegisterRequest, jsonWebKey interface{}) ([]byte, []by
 	return []byte(clientJson), request
 }
 
-func (dev *HidDevice) authenticate(req *AuthenticateRequest, jsonWebKey interface{}) (uint16, *AuthenticateResponse, error) {
+func (dev *HidDevice) authenticate(req *AuthenticateRequest, jsonWebKey interface{}) (*AuthenticateResponse, error) {
 	clientData, request := authenticateRequest(req, jsonWebKey)
-	authModifier := AUTH_ENFORCE
+	authModifier := u2fAuthEnforce
 	if req.CheckOnly {
-		authModifier = AUTH_CHECK_ONLY
+		authModifier = u2fAuthCheckOnly
 	}
-	status, response, err := dev.hidDevice.SendAPDU(U2F_AUTHENTICATE, authModifier, 0x00, request)
+	status, response, err := dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0x00, request)
 	var authenticateResponse *AuthenticateResponse
-	if err == nil && status == SW_NO_ERROR {
-		authenticateResponse = &AuthenticateResponse{
-			KeyHandle:     req.KeyHandle,
-			ClientData:    websafeEncode(clientData),
-			SignatureData: websafeEncode(response),
+	if err == nil {
+		if status == u2fStatusNoError {
+			authenticateResponse = &AuthenticateResponse{
+				KeyHandle:     req.KeyHandle,
+				ClientData:    websafeEncode(clientData),
+				SignatureData: websafeEncode(response),
+			}
+		} else {
+			err = u2ferror(status)
 		}
 	}
-	return status, authenticateResponse, err
+	return authenticateResponse, err
 }
 
 func authenticateRequest(req *AuthenticateRequest, jsonWebKey interface{}) ([]byte, []byte) {
@@ -169,5 +179,10 @@ func sha256(data []byte) []byte {
 }
 
 func u2ferror(err uint16) error {
+	if err == u2fStatusConditionsNotSatisfied {
+		return &TestOfUserPresenceRequiredError{}
+	} else if err == u2fStatusWrongData {
+		return &BadKeyHandleError{}
+	}
 	return fmt.Errorf("U2FError: 0x%02x", err)
 }

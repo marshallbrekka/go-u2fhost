@@ -1,7 +1,7 @@
 package hid
 
 import (
-	"github.com/GeertJohan/go.hid"
+	"github.com/marshallbrekka/go.hid"
 )
 
 type RawHidDevice struct {

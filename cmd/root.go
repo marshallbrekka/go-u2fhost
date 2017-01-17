@@ -11,7 +11,7 @@ import (
 var Verbose bool
 
 var RootCmd = &cobra.Command{
-	Use:   "u2f-host",
+	Use:   "u2fhost",
 	Short: "CLI for interacting with U2F tokens.",
 }
 

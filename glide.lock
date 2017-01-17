@@ -1,6 +1,22 @@
-hash: a22251d62a65e7dd956365699b5ee4187facbe5e4a0695fa6bbff3435ac123f5
-updated: 2016-10-06T10:09:28.80986557-07:00
+hash: b145eeffe205f11256ebd7032e29a932df3033ef713fe429b2f350c30b947fa2
+updated: 2017-01-16T18:48:16.574340349-08:00
 imports:
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/marshallbrekka/go.hid
+  version: 2c1c4616a9e71d08897a583653abca4b4ac55028
 - name: github.com/marshallbrekka/hid
   version: 0a6d85494aa37593bb5bfc0e3840d149a19f8319
+- name: github.com/Sirupsen/logrus
+  version: 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
+- name: github.com/spf13/cobra
+  version: 1dd5ff2e11b6dca62fdcb275eb804b94607d8b06
+- name: github.com/spf13/pflag
+  version: 51268031d79952516489a9f8aa34e9709b98d946
+- name: github.com/vitaminwater/cgo.wchar
+  version: 5dd6f4be3f2a8c064325fe63439975cf37a8aa1d
+- name: golang.org/x/sys
+  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
+  subpackages:
+  - unix
 testImports: []
