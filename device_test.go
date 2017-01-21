@@ -1,4 +1,4 @@
-package u2f
+package u2fhost
 
 import (
 	"encoding/hex"
@@ -10,10 +10,10 @@ import (
 // https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#examples
 func TestRegisterRequest(t *testing.T) {
 	cidPubKey := JSONWebKey{
-		Algorithm: "EC",
-		Curve:     "P-256",
-		X:         "HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8",
-		Y:         "XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4",
+		Kty: "EC",
+		Crv: "P-256",
+		X:   "HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8",
+		Y:   "XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4",
 	}
 
 	clientDataHash := "4142d21c00d94ffb9d504ada8f99b721f4b191ae4e37ca0140f696b6983cfacb"
@@ -39,10 +39,10 @@ func TestRegisterRequest(t *testing.T) {
 func TestAuthenticateRequest(t *testing.T) {
 	keyHandle := "mykeyhandle"
 	cidPubKey := JSONWebKey{
-		Algorithm: "EC",
-		Curve:     "P-256",
-		X:         "HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8",
-		Y:         "XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4",
+		Kty: "EC",
+		Crv: "P-256",
+		X:   "HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8",
+		Y:   "XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4",
 	}
 
 	clientDataHash := "ccd6ee2e47baef244d49a222db496bad0ef5b6f93aa7cc4d30c4821b3b9dbc57"

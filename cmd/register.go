@@ -56,7 +56,7 @@ func registerHelper(req *u2f.RegisterRequest, devices []*u2f.HidDevice) *u2f.Reg
 			}(i)
 			version, err := device.Version()
 			if err != nil {
-				log.Debugf("Device version error: %s", err.Error())
+				log.Debugf("Device version error: %s", err)
 			} else {
 				log.Debugf("Device version: %s", version)
 			}
@@ -69,14 +69,12 @@ func registerHelper(req *u2f.RegisterRequest, devices []*u2f.HidDevice) *u2f.Reg
 	iterationCount := 0
 	for iterationCount < 100 {
 		for _, device := range openDevices {
-			status, response, err := device.Register(req)
+			response, err := device.Register(req)
 			if err != nil {
 				log.Debugf("Got error from device, skipping: %s", err.Error())
-			}
-			if status == u2f.SW_NO_ERROR {
+			} else {
 				return response
 			}
-			log.Debugf("Got status response %#x", status)
 		}
 		iterationCount += 1
 		time.Sleep(250 * time.Millisecond)

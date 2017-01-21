@@ -61,7 +61,7 @@ func authenticateHelper(req *u2f.AuthenticateRequest, devices []*u2f.HidDevice) 
 	for i, device := range devices {
 		err := device.Open()
 		if err == nil {
-			openDevices = append(openDevices, devices[i])
+			openDevices = append(openDevices, u2f.Device(devices[i]))
 			defer func(i int) {
 				devices[i].Close()
 			}(i)
@@ -80,17 +80,16 @@ func authenticateHelper(req *u2f.AuthenticateRequest, devices []*u2f.HidDevice) 
 	prompted := false
 	for iterationCount < 100 {
 		for _, device := range openDevices {
-			status, response, err := device.Authenticate(req)
-			if err != nil {
+			response, err := device.Authenticate(req)
+			if err == nil {
+				return response
 				log.Debugf("Got error from device, skipping: %s", err.Error())
-			}
-			if status == u2f.SW_CONDITIONS_NOT_SATISFIED && !prompted {
+			} else if _, ok := err.(u2f.TestOfUserPresenceRequiredError); ok && !prompted {
 				fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
 				prompted = true
-			} else if status == u2f.SW_NO_ERROR {
-				return response
+			} else {
+				log.Debugf("Got status response %#x", err)
 			}
-			log.Debugf("Got status response %#x", status)
 		}
 		iterationCount += 1
 		time.Sleep(250 * time.Millisecond)

@@ -1,11 +1,10 @@
-package u2f
+package u2fhost
 
 import (
 	sha256pkg "crypto/sha256"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/marshallbrekka/u2fhost/hid"
 )
 
@@ -43,6 +42,8 @@ func newHidDevice(dev hid.Device) *HidDevice {
 	}
 }
 
+// Returns a list of supported U2F devices as HidDevice pointers.
+// If no suported devices are found, the returned list is empty.
 func Devices() []*HidDevice {
 	hidDevices := hid.Devices()
 	devices := make([]*HidDevice, len(hidDevices))
@@ -52,14 +53,18 @@ func Devices() []*HidDevice {
 	return devices
 }
 
+// Opens the device.
+// Must be called before calling Register* or Authenticate*.
 func (dev *HidDevice) Open() error {
 	return dev.hidDevice.Open()
 }
 
+// Closes the device.
 func (dev *HidDevice) Close() {
 	dev.hidDevice.Close()
 }
 
+// Returns the U2F version the device supports.
 func (dev *HidDevice) Version() (string, error) {
 	status, response, err := dev.hidDevice.SendAPDU(u2fCommandVersion, 0, 0, []byte{})
 	if err != nil {
@@ -71,26 +76,36 @@ func (dev *HidDevice) Version() (string, error) {
 	return string(response), nil
 }
 
+// Registers with the device using the RegisterRequest, returning a RegisterResponse.
 func (dev *HidDevice) Register(req *RegisterRequest) (*RegisterResponse, error) {
 	return dev.register(req, nil)
 }
 
+// Registers with the device using the RegisterRequest and a JSONWebKey, returning a RegisterResponse.
 func (dev *HidDevice) RegisterWithJWK(req *RegisterRequest, jsonWebKey *JSONWebKey) (*RegisterResponse, error) {
 	return dev.register(req, jsonWebKey)
 }
 
+// Registers with the device using the RegisterRequest and a JSON web
+// key string, returning a RegisterResponse.
 func (dev *HidDevice) RegisterWithJWKString(req *RegisterRequest, jsonWebKey string) (*RegisterResponse, error) {
 	return dev.register(req, jsonWebKey)
 }
 
+// Authenticates with the device using the AuthenticateRequest,
+// returning an AuthenticateResponse.
 func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateResponse, error) {
 	return dev.authenticate(req, nil)
 }
 
+// Authenticates with the device using the AuthenticateRequest and a JSONWebKey,
+// returning an AuthenticateResponse.
 func (dev *HidDevice) AuthenticateWithJWK(req *AuthenticateRequest, jsonWebKey *JSONWebKey) (*AuthenticateResponse, error) {
 	return dev.authenticate(req, jsonWebKey)
 }
 
+// Authenticates with the device using the AuthenticateRequest and a
+// JSON web key string, returning an AuthenticateResponse.
 func (dev *HidDevice) AuthenticateWithJWKString(req *AuthenticateRequest, jsonWebKey string) (*AuthenticateResponse, error) {
 	return dev.authenticate(req, jsonWebKey)
 }
@@ -102,7 +117,7 @@ func (dev *HidDevice) register(req *RegisterRequest, jsonWebKey interface{}) (*R
 	status, response, err := dev.hidDevice.SendAPDU(u2fCommandRegister, p1, p2, request)
 	var registerResponse *RegisterResponse
 	if err == nil {
-		if status == u2fSatusNoError {
+		if status == u2fStatusNoError {
 			registerResponse = &RegisterResponse{
 				RegistrationData: websafeEncode(response),
 				ClientData:       websafeEncode(clientData),
