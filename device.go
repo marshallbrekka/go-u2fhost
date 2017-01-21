@@ -44,7 +44,7 @@ func newHidDevice(dev hid.Device) *HidDevice {
 }
 
 // Returns a list of supported U2F devices as HidDevice pointers.
-// If no suported devices are found, the returned list is empty.
+// If no supported devices are found, the returned list is empty.
 func Devices() []*HidDevice {
 	hidDevices := hid.Devices()
 	devices := make([]*HidDevice, len(hidDevices))
