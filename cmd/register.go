@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	u2f "github.com/marshallbrekka/u2fhost"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 var registerChallenge string

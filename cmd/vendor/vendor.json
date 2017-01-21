@@ -1,0 +1,37 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "dGXnnR7ZhsrZNnEqFimk6q7YCqs=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "61e43dc76f7ee59a82bdf3d71033dc12bea4c77d",
+			"revisionTime": "2017-01-13T01:19:11Z"
+		},
+		{
+			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
+			"path": "github.com/inconshreveable/mousetrap",
+			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+			"revisionTime": "2014-10-17T20:07:13Z"
+		},
+		{
+			"checksumSHA1": "s/qchlUIU/4Ilo5BjPnb4M+bSU0=",
+			"path": "github.com/spf13/cobra",
+			"revision": "dc208f4211e7f6df7ec8cb62640f57d3e154910d",
+			"revisionTime": "2017-01-18T18:55:16Z"
+		},
+		{
+			"checksumSHA1": "mnilgr/Am4r2Xh0UxU24XelRnzg=",
+			"path": "github.com/spf13/pflag",
+			"revision": "a232f6d9f87afaaa08bafaff5da685f974b83313",
+			"revisionTime": "2017-01-19T21:32:39Z"
+		},
+		{
+			"checksumSHA1": "uTQtOqR0ePMMcvuvAIksiIZxhqU=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "d75a52659825e75fff6158388dddc6a5b04f9ba5",
+			"revisionTime": "2016-12-14T18:38:57Z"
+		}
+	],
+	"rootPath": "github.com/marshallbrekka/u2fhost/cmd"
+}

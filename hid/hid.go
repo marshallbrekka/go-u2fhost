@@ -6,9 +6,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/marshallbrekka/go.hid"
 	"io"
+
+	"github.com/marshallbrekka/go.hid"
 )
 
 const TYPE_INIT uint8 = 0x80
@@ -99,9 +99,7 @@ func (dev *HidDevice) SendAPDU(instruction, p1, p2 uint8, data []byte) (uint16, 
 	copy(request[7:7+size], data)
 	request[7+size] = 0x04
 	request[8+size] = 0x00
-	log.Debugf("APDU request % X", request)
 	resp, err := call(dev.Device, dev.channelId, CMD_APDU, request)
-	log.Debugf("APDU response % X", resp)
 	if err != nil {
 		return 0, []byte{}, err
 	}
@@ -120,7 +118,6 @@ func call(dev BaseDevice, channelId uint32, command uint8, data []byte) ([]byte,
 }
 
 func sendRequest(dev BaseDevice, channelId uint32, command uint8, data []byte) error {
-	log.Debugf("Sending HID request: channelId %#x, command %#x: data %x", channelId, command, data)
 	fullRequest := make([]byte, HID_RPT_SIZE+1)
 	request := fullRequest[1:]
 	copy(request[0:4], int32bytes(channelId))
