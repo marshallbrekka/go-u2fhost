@@ -126,7 +126,8 @@ for iterationCount < 100 {
 	time.Sleep(250 * time.Millisecond)
 }
 ```
-
+## Example
+The `cmd` directory contains a sample CLI program that allows you to run the `register` and `authenticate` operations, providing all of the inputs that would normally be provided by the server via command line flags.
 
 ## Known Issues
 
