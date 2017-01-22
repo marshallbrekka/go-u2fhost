@@ -1,3 +1,7 @@
+dependencies:
+  pre:
+    - sudo apt-get update; sudo apt-get install libusb-1.0-0-dev
+
 test:
   post:
     - bash <(curl -s https://codecov.io/bash)
