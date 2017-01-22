@@ -126,3 +126,10 @@ for iterationCount < 100 {
 	time.Sleep(250 * time.Millisecond)
 }
 ```
+
+
+## Known Issues
+
+### Does not yet work on linux.
+HID devices can't be identified as the hid library does not expose the usage page.
+There is a known workaround for this (and an issue filed), so it is not something fundamentally wrong with this implimentation.
