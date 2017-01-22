@@ -51,11 +51,14 @@ func TestAuthenticateRequest(t *testing.T) {
 		Challenge: "opsXqUifDriAAmWclinfbS0e-USY0CgyJHe_Otd7z8o",
 		Facet:     "http://example.com",
 		AppId:     "https://gstatic.com/securitykey/a/example.com",
-		KeyHandle: keyHandle,
+		KeyHandle: websafeEncode([]byte(keyHandle)),
 	}
 	expectedRequest := clientDataHash + appIdHash + hex.EncodeToString([]byte{11}) + hex.EncodeToString([]byte(keyHandle))
 	expectedJson := "{\"typ\":\"navigator.id.getAssertion\",\"challenge\":\"opsXqUifDriAAmWclinfbS0e-USY0CgyJHe_Otd7z8o\",\"cid_pubkey\":{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8\",\"y\":\"XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4\"},\"origin\":\"http://example.com\"}"
-	clientJson, request := authenticateRequest(authRequest, cidPubKey)
+	clientJson, request, err := authenticateRequest(authRequest, cidPubKey)
+	if err != nil {
+		t.Errorf("Error constructing authenticate request: %s", err)
+	}
 
 	if string(clientJson) != expectedJson {
 		t.Errorf("Expected client json to be %s but got %s", expectedJson, string(clientJson))
