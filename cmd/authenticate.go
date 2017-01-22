@@ -1,13 +1,13 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	u2f "github.com/marshallbrekka/u2fhost"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 var authenticateChallenge string
@@ -31,15 +31,11 @@ var authenticateCmd = &cobra.Command{
 		if authenticateKeyHandle == "" {
 			log.Fatalf("Must specify key handle")
 		}
-		keyHandle, err := base64.RawURLEncoding.DecodeString(authenticateKeyHandle)
-		if err != nil {
-			log.Fatalf("Got error decoding hex encoded key handle: %s", err.Error())
-		}
 		request := &u2f.AuthenticateRequest{
 			Challenge: authenticateChallenge,
 			AppId:     authenticateAppId,
 			Facet:     authenticateFacet,
-			KeyHandle: string(keyHandle),
+			KeyHandle: authenticateKeyHandle,
 		}
 		response := authenticateHelper(request, u2f.Devices())
 		responseJson, _ := json.Marshal(response)
@@ -83,12 +79,11 @@ func authenticateHelper(req *u2f.AuthenticateRequest, devices []*u2f.HidDevice) 
 			response, err := device.Authenticate(req)
 			if err == nil {
 				return response
-				log.Debugf("Got error from device, skipping: %s", err.Error())
 			} else if _, ok := err.(u2f.TestOfUserPresenceRequiredError); ok && !prompted {
 				fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
 				prompted = true
 			} else {
-				log.Debugf("Got status response %#x", err)
+				log.Debugf("Got status response %s", err)
 			}
 		}
 		iterationCount += 1

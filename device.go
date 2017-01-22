@@ -146,7 +146,10 @@ func registerRequest(req *RegisterRequest, jsonWebKey interface{}) ([]byte, []by
 }
 
 func (dev *HidDevice) authenticate(req *AuthenticateRequest, jsonWebKey interface{}) (*AuthenticateResponse, error) {
-	clientData, request := authenticateRequest(req, jsonWebKey)
+	clientData, request, err := authenticateRequest(req, jsonWebKey)
+	if err != nil {
+		return nil, err
+	}
 	authModifier := u2fAuthEnforce
 	if req.CheckOnly {
 		authModifier = u2fAuthCheckOnly
@@ -167,8 +170,12 @@ func (dev *HidDevice) authenticate(req *AuthenticateRequest, jsonWebKey interfac
 	return authenticateResponse, err
 }
 
-func authenticateRequest(req *AuthenticateRequest, jsonWebKey interface{}) ([]byte, []byte) {
-	keyLength := uint8(len(req.KeyHandle))
+func authenticateRequest(req *AuthenticateRequest, jsonWebKey interface{}) ([]byte, []byte, error) {
+	keyHandle, err := websafeDecode(req.KeyHandle)
+	if err != nil {
+		return []byte{}, []byte{}, fmt.Errorf("base64 key handle: %s", err)
+	}
+	keyLength := uint8(len(keyHandle))
 	request := make([]byte, 65+keyLength)
 	client := clientData{
 		Type:               "navigator.id.getAssertion",
@@ -180,12 +187,16 @@ func authenticateRequest(req *AuthenticateRequest, jsonWebKey interface{}) ([]by
 	copy(request[0:32], sha256(clientJson))
 	copy(request[32:64], sha256([]byte(req.AppId)))
 	request[64] = keyLength
-	copy(request[65:], []byte(req.KeyHandle))
-	return []byte(clientJson), request
+	copy(request[65:], keyHandle)
+	return []byte(clientJson), request, nil
 }
 
 func websafeEncode(data []byte) string {
 	return b64.RawURLEncoding.EncodeToString(data)
+}
+
+func websafeDecode(data string) ([]byte, error) {
+	return b64.RawURLEncoding.DecodeString(data)
 }
 
 func sha256(data []byte) []byte {
