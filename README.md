@@ -6,7 +6,7 @@ A library for using U2F USB devices from Go programs.
 ## Who is this for
 This library allows clients to interface with U2F USB devices to perform user authentication.
 
-Because U2F is supported in most major browsers (either natively or by extensions), the only place I really forsee this being used (and why I wrote it in the first place) is to add U2F support to CLI apps.
+Because U2F is supported in most major browsers (either natively or by extensions), the only place I really foresee this being used (and why I wrote it in the first place) is to add U2F support to CLI apps.
 
 ## Usage
 
@@ -133,4 +133,4 @@ The `cmd` directory contains a sample CLI program that allows you to run the `re
 
 ### Does not yet work on linux.
 HID devices can't be identified as the hid library does not expose the usage page.
-There is a known workaround for this (and an issue filed), so it is not something fundamentally wrong with this implimentation.
+There is a known workaround for this (and an issue filed), so it is not something fundamentally wrong with this implementation.

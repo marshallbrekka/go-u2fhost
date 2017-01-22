@@ -6,11 +6,7 @@ type Device interface {
 	Close()
 	Version() (string, error)
 	Register(*RegisterRequest) (*RegisterResponse, error)
-	RegisterWithJWK(*RegisterRequest, *JSONWebKey) (*RegisterResponse, error)
-	RegisterWithJWKString(*RegisterRequest, string) (*RegisterResponse, error)
 	Authenticate(*AuthenticateRequest) (*AuthenticateResponse, error)
-	AuthenticateWithJWK(*AuthenticateRequest, *JSONWebKey) (*AuthenticateResponse, error)
-	AuthenticateWithJWKString(*AuthenticateRequest, string) (*AuthenticateResponse, error)
 }
 
 // A RegisterRequest struct is used when attempting to register a new U2F device.
@@ -27,6 +23,12 @@ type RegisterRequest struct {
 	// The Facet should be provided by the client.
 	// For more information on AppId and Facets see https://fidoalliance.org/specs/fido-u2f-v1.0-ps-20141009/fido-appid-and-facets-ps-20141009.html#the-appid-and-facetid-assertions
 	Facet string
+
+	// Optional JSONWebKey, mutually exclusive with JSONWebKeyString
+	JSONWebKey *JSONWebKey
+
+	// Optional JSONWebKey in string form, mutually exclusive with JSONWebKey
+	JSONWebKeyString *string
 }
 
 // A response from a Register operation.
@@ -44,11 +46,25 @@ type AuthenticateRequest struct {
 	// A string to sign. If used for authentication it should be a random string,
 	// but could also be used to sign other kinds of data (ex: commit sha).
 	Challenge string
+
+	// The AppId can be provided by the server, but if not it should
+	// be provided by the client.
 	// For more information on AppId and Facets see https://fidoalliance.org/specs/fido-u2f-v1.0-ps-20141009/fido-appid-and-facets-ps-20141009.html#the-appid-and-facetid-assertions
 	AppId string
+
+	// The Facet should be provided by the client.
+	// For more information on AppId and Facets see https://fidoalliance.org/specs/fido-u2f-v1.0-ps-20141009/fido-appid-and-facets-ps-20141009.html#the-appid-and-facetid-assertions
 	Facet string
+
 	// The base64 encoded key handle that was returned in the RegistrationData field of the RegisterResponse.
 	KeyHandle string
+
+	// Optional JSONWebKey, mutually exclusive with JSONWebKeyString
+	JSONWebKey *JSONWebKey
+
+	// Optional JSONWebKey in string form, mutually exclusive with JSONWebKey
+	JSONWebKeyString *string
+
 	// Optional boolean (defaults to false) that when true, will not attempt to
 	// sign the challenge, and will only return a the statuses
 	CheckOnly bool
