@@ -20,15 +20,18 @@ func sha256(data []byte) []byte {
 	return sha256Instance.Sum(nil)
 }
 
-func getJSONWebToken(jwk *JSONWebKey, jwkString *string) (interface{}, error) {
-	if jwk != nil && jwkString != nil {
-		return nil, fmt.Errorf("Both JSONWebKey and JSONWebKeyString fields were supplied, but they are mutally exclusive.")
+// Returns the value for the ChannelId public key, can be nil, a JSONWebKey, or the string "unused".
+// For more info see cid_pubkey https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#idl-def-ClientData
+func channelIdPublicKey(jwk *JSONWebKey, unused bool) (interface{}, error) {
+	if unused && jwk != nil {
+		return nil, fmt.Errorf("ChannelIdPublicKey was supplied, but ChannelIdUnsed was set to true.")
 	}
 	if jwk != nil {
 		return jwk, nil
 	}
-	if jwkString != nil {
-		return jwkString, nil
+	if unused {
+		//
+		return "unused", nil
 	}
 	return nil, nil
 }

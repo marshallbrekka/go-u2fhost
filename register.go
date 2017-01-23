@@ -3,6 +3,8 @@ package u2fhost
 import (
 	"encoding/json"
 	"fmt"
+
+	butil "github.com/marshallbrekka/u2fhost/bytes"
 )
 
 // Registers with the device using the RegisterRequest, returning a RegisterResponse.
@@ -15,6 +17,34 @@ func (dev *HidDevice) Register(req *RegisterRequest) (*RegisterResponse, error) 
 	var p2 uint8 = 0
 	status, response, err := dev.hidDevice.SendAPDU(u2fCommandRegister, p1, p2, request)
 	return registerResponse(status, response, clientData, err)
+}
+
+func registerRequest(req *RegisterRequest) ([]byte, []byte, error) {
+	// Get the channel id public key, if any
+	cid, err := channelIdPublicKey(req.ChannelIdPublicKey, req.ChannelIdUnused)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Construct the client json
+	client := clientData{
+		Type:               "navigator.id.finishEnrollment",
+		Challenge:          req.Challenge,
+		Origin:             req.Facet,
+		ChannelIdPublicKey: cid,
+	}
+	clientJson, err := json.Marshal(client)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error marshaling clientData to json: %s", err)
+	}
+
+	// Pack into byte array
+	// https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#registration-request-message---u2f_register
+	request := butil.Concat(
+		sha256(clientJson),
+		sha256([]byte(req.AppId)),
+	)
+	return []byte(clientJson), request, nil
 }
 
 func registerResponse(status uint16, response, clientData []byte, err error) (*RegisterResponse, error) {
@@ -30,30 +60,4 @@ func registerResponse(status uint16, response, clientData []byte, err error) (*R
 		}
 	}
 	return registerResponse, err
-}
-
-func registerRequest(req *RegisterRequest) ([]byte, []byte, error) {
-	// Get jsonWebKey, if any
-	jsonWebKey, err := getJSONWebToken(req.JSONWebKey, req.JSONWebKeyString)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Construct the client json
-	client := clientData{
-		Type:               "navigator.id.finishEnrollment",
-		Challenge:          req.Challenge,
-		Origin:             req.Facet,
-		ChannelIdPublicKey: jsonWebKey,
-	}
-	clientJson, err := json.Marshal(client)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error marshaling clientData to json: %s", err)
-	}
-
-	// Pack into byte array
-	request := make([]byte, 64)
-	copy(request, sha256(clientJson))
-	copy(request[32:64], sha256([]byte(req.AppId)))
-	return []byte(clientJson), request, nil
 }

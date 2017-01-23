@@ -24,11 +24,12 @@ type RegisterRequest struct {
 	// For more information on AppId and Facets see https://fidoalliance.org/specs/fido-u2f-v1.0-ps-20141009/fido-appid-and-facets-ps-20141009.html#the-appid-and-facetid-assertions
 	Facet string
 
-	// Optional JSONWebKey, mutually exclusive with JSONWebKeyString
-	JSONWebKey *JSONWebKey
+	// Optional channel id public key, mutually exclusive with setting ChannelIdUnused to true.
+	ChannelIdPublicKey *JSONWebKey
 
-	// Optional JSONWebKey in string form, mutually exclusive with JSONWebKey
-	JSONWebKeyString *string
+	// Only set to true if the client supports channel id, but the server does not.
+	// Setting to true is mutually exclusive with providing a ChannelIdPublicKey.
+	ChannelIdUnused bool
 }
 
 // A response from a Register operation.
@@ -59,14 +60,17 @@ type AuthenticateRequest struct {
 	// The base64 encoded key handle that was returned in the RegistrationData field of the RegisterResponse.
 	KeyHandle string
 
-	// Optional JSONWebKey, mutually exclusive with JSONWebKeyString
-	JSONWebKey *JSONWebKey
+	// Optional channel id public key, mutually exclusive with setting ChannelIdUnused to true.
+	ChannelIdPublicKey *JSONWebKey
 
-	// Optional JSONWebKey in string form, mutually exclusive with JSONWebKey
-	JSONWebKeyString *string
+	// Only set to true if the client supports channel id, but the server does not.
+	// Setting to true is mutually exclusive with providing a ChannelIdPublicKey.
+	ChannelIdUnused bool
 
 	// Optional boolean (defaults to false) that when true, will not attempt to
-	// sign the challenge, and will only return a the statuses
+	// sign the challenge, and will only return the status.
+	// This can be used to determine if a U2F device matches any of the provided key handles
+	// before attempting to prompt the user to activate their devices.
 	CheckOnly bool
 }
 

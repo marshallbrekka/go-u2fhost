@@ -3,6 +3,8 @@ package u2fhost
 import (
 	"encoding/json"
 	"fmt"
+
+	butil "github.com/marshallbrekka/u2fhost/bytes"
 )
 
 // Authenticates with the device using the AuthenticateRequest,
@@ -38,8 +40,8 @@ func authenticateResponse(status uint16, response, clientData []byte, keyHandle 
 }
 
 func authenticateRequest(req *AuthenticateRequest) ([]byte, []byte, error) {
-	// Get jsonWebKey, if any
-	jsonWebKey, err := getJSONWebToken(req.JSONWebKey, req.JSONWebKeyString)
+	// Get the channel id public key, if any
+	cid, err := channelIdPublicKey(req.ChannelIdPublicKey, req.ChannelIdUnused)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,16 +55,20 @@ func authenticateRequest(req *AuthenticateRequest) ([]byte, []byte, error) {
 		Type:               "navigator.id.getAssertion",
 		Challenge:          req.Challenge,
 		Origin:             req.Facet,
-		ChannelIdPublicKey: jsonWebKey,
+		ChannelIdPublicKey: cid,
 	}
-	clientJson, _ := json.Marshal(client)
+	clientJson, err := json.Marshal(client)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error marshaling clientData to json: %s", err)
+	}
 
 	// Pack into byte array
-	keyLength := uint8(len(keyHandle))
-	request := make([]byte, 65+keyLength)
-	copy(request[0:32], sha256(clientJson))
-	copy(request[32:64], sha256([]byte(req.AppId)))
-	request[64] = keyLength
-	copy(request[65:], keyHandle)
+	// https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#authentication-request-message---u2f_authenticate
+	request := butil.Concat(
+		sha256(clientJson),
+		sha256([]byte(req.AppId)),
+		[]byte{byte(len(keyHandle))},
+		keyHandle,
+	)
 	return []byte(clientJson), request, nil
 }
