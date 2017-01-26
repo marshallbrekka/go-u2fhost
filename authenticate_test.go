@@ -2,6 +2,7 @@ package u2fhost
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 )
 
@@ -35,5 +36,40 @@ func TestAuthenticateRequest(t *testing.T) {
 	requestString := hex.EncodeToString(request)
 	if requestString != expectedRequest {
 		t.Errorf("Expected %s but got %s", expectedRequest, requestString)
+	}
+}
+
+func TestAuthenticateResponse(t *testing.T) {
+	var resp *AuthenticateResponse
+	var err error
+
+	// Expect to return the error passed in.
+	newError := fmt.Errorf("Error")
+	resp, err = authenticateResponse(u2fStatusNoError, []byte{}, []byte{}, "keyhandle", newError)
+	if err == nil {
+		t.Errorf("Expected an error, but got response %+v", resp)
+	} else if err != newError {
+		t.Errorf("Expected error %s, but got %s", newError, err)
+	}
+
+	// Expect a U2F error based on the status
+	resp, err = authenticateResponse(u2fStatusConditionsNotSatisfied, []byte{}, []byte{}, "keyhandle", nil)
+	if err == nil {
+		t.Errorf("Expected an error, but got response %+v", resp)
+	} else if _, ok := err.(*TestOfUserPresenceRequiredError); !ok {
+		t.Errorf("Expected an error, but got response %+v", resp)
+	}
+
+	// Expect a valid response
+	expectedResponse := AuthenticateResponse{
+		KeyHandle:     "keyhandle",
+		SignatureData: "AQIDBA",
+		ClientData:    "BQYHCA",
+	}
+	resp, err = authenticateResponse(u2fStatusNoError, []byte{1, 2, 3, 4}, []byte{5, 6, 7, 8}, "keyhandle", nil)
+	if err != nil {
+		t.Errorf("Did not expect an error: %s", err)
+	} else if *resp != expectedResponse {
+		t.Errorf("Expected %+v, but got response %+v", expectedResponse, *resp)
 	}
 }
