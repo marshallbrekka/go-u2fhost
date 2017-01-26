@@ -67,7 +67,7 @@ func TestOpen(t *testing.T) {
 	output2 := []byte{0xff, 0xff, 0xff, 0xff, 0x86, 0, 12, 1, 2, 3, 4, 5, 6, 7, 8, 4, 5, 6, 7}
 	spacer := make([]byte, 64-len(output1))
 	baseDevice.output = butil.Concat(output1, spacer, output2, spacer)
-	expectedInput := butil.ConcatInto(make([]byte, 65), []byte{0, 0xff, 0xff, 0xff, 0xff, 0x86, 0, 8, 1, 2, 3, 4, 5, 6, 7, 8})
+	expectedInput, _ := butil.ConcatInto(make([]byte, 65), []byte{0, 0xff, 0xff, 0xff, 0xff, 0x86, 0, 8, 1, 2, 3, 4, 5, 6, 7, 8})
 
 	// The uint32 of the bytes 4,5,6,7
 	var expectedChannel uint32 = 67438087
@@ -95,8 +95,8 @@ func TestClose(t *testing.T) {
 func TestSendAPDU(t *testing.T) {
 	baseDevice := &testWrapperDevice{}
 	dev := newHidDevice(baseDevice)
-	baseDevice.output = butil.ConcatInto(make([]byte, 64), []byte{255, 255, 255, 255, 0x83, 0, 8, 85, 50, 70, 95, 86, 50, 0x90, 0x00})
-	expectedInput := butil.ConcatInto(make([]byte, 65), []byte{0, 255, 255, 255, 255, 0x83, 0, 12, 0, 0x03, 0, 0, 0, 0, 0x03, 1, 2, 3, 0x04, 0})
+	baseDevice.output, _ = butil.ConcatInto(make([]byte, 64), []byte{255, 255, 255, 255, 0x83, 0, 8, 85, 50, 70, 95, 86, 50, 0x90, 0x00})
+	expectedInput, _ := butil.ConcatInto(make([]byte, 65), []byte{0, 255, 255, 255, 255, 0x83, 0, 12, 0, 0x03, 0, 0, 0, 0, 0x03, 1, 2, 3, 0x04, 0})
 	status, result, err := dev.SendAPDU(0x03, 0, 0, []byte{1, 2, 3})
 	if err != nil {
 		t.Errorf("Did not expect error, but got %s", err.Error())
@@ -130,7 +130,7 @@ func TestSendRequestShortValue(t *testing.T) {
 	// command (0x80 | cmd), the next two are the length of the data, and the last
 	// 5 are the data.
 	expectedSub := []byte{0, 0, 0, 0, 4, 129, 0, 5, 1, 2, 3, 4, 5}
-	expectedFull := butil.ConcatInto(make([]byte, 65), expectedSub)
+	expectedFull, _ := butil.ConcatInto(make([]byte, 65), expectedSub)
 	err := sendRequest(dev, 4, 1, []byte{1, 2, 3, 4, 5})
 	if err != nil {
 		t.Errorf("Got unexpected error: %s", err.Error())
@@ -150,7 +150,7 @@ func TestSendRequestLongValue(t *testing.T) {
 	data1 := makeRange(0, 57)
 	data2 := makeRange(0, 59)
 	data3 := makeRange(0, 22)
-	expected := butil.ConcatInto(make([]byte, 65*5), header1, data1, header2, data2, header3, data2, header4, data2, header5, data3)
+	expected, _ := butil.ConcatInto(make([]byte, 65*5), header1, data1, header2, data2, header3, data2, header4, data2, header5, data3)
 	requestData := butil.Concat(data1, data2, data2, data2, data3)
 	err := sendRequest(dev, 4, 1, requestData)
 	if err != nil {
@@ -172,7 +172,7 @@ func TestReadResponseError(t *testing.T) {
 
 	// Test error code response
 	subResponse := []byte{0, 0, 0, 4, 0xbf}
-	response := butil.ConcatInto(make([]byte, 64), subResponse)
+	response, _ := butil.ConcatInto(make([]byte, 64), subResponse)
 	dev = &testWrapperDevice{output: response}
 	_, err = readResponse(dev, 4, 1)
 	if err == nil {
@@ -209,7 +209,7 @@ func TestReadResponseShortValue(t *testing.T) {
 	// command (0x80 | cmd), the next two are the length of the data, and the last
 	// 5 are the data.
 	expected := []byte{0, 0, 0, 4, 129, 0, 5, 1, 2, 3, 4, 5}
-	output := butil.ConcatInto(make([]byte, 64), expected)
+	output, _ := butil.ConcatInto(make([]byte, 64), expected)
 	dev := &testWrapperDevice{output: output}
 
 	response, err := readResponse(dev, 4, 1)
@@ -232,7 +232,7 @@ func TestReadResponseLongValue(t *testing.T) {
 	data3 := makeRange(0, 22)
 
 	expected := butil.Concat(data1, data2, data2, data2, data3)
-	output := butil.ConcatInto(make([]byte, 64*5), header1, data1, header2, data2, header3, data2, header4, data2, header5, data3)
+	output, _ := butil.ConcatInto(make([]byte, 64*5), header1, data1, header2, data2, header3, data2, header4, data2, header5, data3)
 	dev := &testWrapperDevice{output: output}
 
 	response, err := readResponse(dev, 4, 1)

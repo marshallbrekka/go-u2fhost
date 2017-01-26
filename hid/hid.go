@@ -120,7 +120,7 @@ func sendRequest(dev BaseDevice, channelId uint32, command uint8, data []byte) e
 	offset := copyLength
 	var sequence uint8 = 0
 
-	fullRequest := butil.ConcatInto(
+	fullRequest, err := butil.ConcatInto(
 		make([]byte, HID_RPT_SIZE+1),
 		// skip first byte
 		[]byte{0},
@@ -129,13 +129,16 @@ func sendRequest(dev BaseDevice, channelId uint32, command uint8, data []byte) e
 		int16bytes(uint16(len(data))),
 		data[0:copyLength],
 	)
-	_, err := dev.Write(fullRequest)
+	if err != nil {
+		return err
+	}
+	_, err = dev.Write(fullRequest)
 	if err != nil {
 		return err
 	}
 	for offset < uint16(len(data)) {
 		copyLength = min(uint16(len(data)-int(offset)), HID_RPT_SIZE-5)
-		fullRequest = butil.ConcatInto(
+		fullRequest, err = butil.ConcatInto(
 			make([]byte, HID_RPT_SIZE+1),
 			// skip first byte
 			[]byte{0},
@@ -143,6 +146,9 @@ func sendRequest(dev BaseDevice, channelId uint32, command uint8, data []byte) e
 			[]byte{0x7f & sequence},
 			data[offset:offset+copyLength],
 		)
+		if err != nil {
+			return err
+		}
 		_, err := dev.Write(fullRequest)
 		if err != nil {
 			return err
