@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/marshallbrekka/go.hid"
+	butil "github.com/marshallbrekka/u2fhost/bytes"
 )
 
 const TYPE_INIT uint8 = 0x80
@@ -89,19 +90,16 @@ func (dev *HidDevice) Close() {
 }
 
 func (dev *HidDevice) SendAPDU(instruction, p1, p2 uint8, data []byte) (uint16, []byte, error) {
-	size := uint32(len(data))
-	request := make([]byte, 9+size)
-	// first byte is zero, skip
-	request[1] = instruction
-	request[2] = p1
-	request[3] = p2
-	copy(request[4:7], int24bytes(size))
-	copy(request[7:7+size], data)
-	request[7+size] = 0x04
-	request[8+size] = 0x00
+	request := butil.Concat(
+		// first byte is always zero
+		[]byte{0, instruction, p1, p2},
+		int24bytes(uint32(len(data))),
+		data,
+		[]byte{0x04, 0x00},
+	)
 	resp, err := call(dev.Device, dev.channelId, CMD_APDU, request)
 	if err != nil {
-		return 0, []byte{}, err
+		return 0, nil, err
 	}
 	status := resp[len(resp)-2:]
 	return bytesint16(status), resp[:len(resp)-2], nil
@@ -112,32 +110,39 @@ func (dev *HidDevice) SendAPDU(instruction, p1, p2 uint8, data []byte) (uint16, 
 func call(dev BaseDevice, channelId uint32, command uint8, data []byte) ([]byte, error) {
 	err := sendRequest(dev, channelId, command, data)
 	if err != nil {
-		return make([]byte, 0), err
+		return nil, err
 	}
 	return readResponse(dev, channelId, command)
 }
 
 func sendRequest(dev BaseDevice, channelId uint32, command uint8, data []byte) error {
-	fullRequest := make([]byte, HID_RPT_SIZE+1)
-	request := fullRequest[1:]
-	copy(request[0:4], int32bytes(channelId))
-	request[4] = TYPE_INIT | command
-	copy(request[5:7], int16bytes(uint16(len(data))))
 	copyLength := min(uint16(len(data)), HID_RPT_SIZE-7)
 	offset := copyLength
 	var sequence uint8 = 0
-	copy(request[7:HID_RPT_SIZE], data[0:copyLength])
+
+	fullRequest := butil.ConcatInto(
+		make([]byte, HID_RPT_SIZE+1),
+		// skip first byte
+		[]byte{0},
+		int32bytes(channelId),
+		[]byte{TYPE_INIT | command},
+		int16bytes(uint16(len(data))),
+		data[0:copyLength],
+	)
 	_, err := dev.Write(fullRequest)
 	if err != nil {
 		return err
 	}
 	for offset < uint16(len(data)) {
-		fullRequest = make([]byte, 65)
-		request = fullRequest[1:]
-		copy(request[0:4], int32bytes(channelId))
-		request[4] = 0x7f & sequence
 		copyLength = min(uint16(len(data)-int(offset)), HID_RPT_SIZE-5)
-		copy(request[5:HID_RPT_SIZE], data[offset:offset+copyLength])
+		fullRequest = butil.ConcatInto(
+			make([]byte, HID_RPT_SIZE+1),
+			// skip first byte
+			[]byte{0},
+			int32bytes(channelId),
+			[]byte{0x7f & sequence},
+			data[offset:offset+copyLength],
+		)
 		_, err := dev.Write(fullRequest)
 		if err != nil {
 			return err
@@ -149,17 +154,15 @@ func sendRequest(dev BaseDevice, channelId uint32, command uint8, data []byte) e
 }
 
 func readResponse(dev BaseDevice, channelId uint32, command uint8) ([]byte, error) {
-	header := make([]byte, 5)
-	copy(header[:4], int32bytes(channelId))
-	header[4] = TYPE_INIT | command
+	header := butil.Concat(int32bytes(channelId), []byte{TYPE_INIT | command})
 	response := make([]byte, HID_RPT_SIZE)
 	for !bytes.Equal(header, response[:5]) {
 		_, err := dev.ReadTimeout(response, 2000)
 		if err != nil {
-			return []byte{}, err
+			return nil, err
 		}
 		if bytes.Equal(response[:4], header[:4]) && response[4] == STAT_ERR {
-			return make([]byte, 0), u2fhiderror(response[6])
+			return nil, u2fhiderror(response[6])
 		}
 	}
 	dataLength := bytesint16(response[5:7])
@@ -171,13 +174,13 @@ func readResponse(dev BaseDevice, channelId uint32, command uint8) ([]byte, erro
 		response = make([]byte, HID_RPT_SIZE)
 		_, err := dev.ReadTimeout(response, 2000)
 		if err != nil {
-			return []byte{}, err
+			return nil, err
 		}
 		if !bytes.Equal(response[:4], header[:4]) {
-			return []byte{}, errors.New("Wrong CID from device!")
+			return nil, errors.New("Wrong CID from device!")
 		}
 		if response[4] != (sequence & 0x7f) {
-			return []byte{}, errors.New("Wrong SEQ from device!")
+			return nil, errors.New("Wrong SEQ from device!")
 		}
 		sequence += 1
 		partLength := min(HID_RPT_SIZE-5, dataLength-totalRead)
@@ -193,7 +196,6 @@ func initDevice(dev BaseDevice, channelId uint32, nonce []byte) (uint32, error) 
 		return 0, err
 	}
 	for !bytes.Equal(resp[:8], nonce) {
-		// fmt.Println("Wrong nonce, read again...")
 		resp, err = readResponse(dev, channelId, CMD_INIT)
 		if err != nil {
 			return 0, err
