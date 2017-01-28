@@ -8,59 +8,32 @@ import (
 	butil "github.com/marshallbrekka/go-u2fhost/bytes"
 )
 
-type testWrapperDevice struct {
-	input       []byte
-	output      []byte
-	readPointer int
-	openError   error
-	readError   error
-	writeError  error
-}
-
-func (dev *testWrapperDevice) Write(data []byte) (int, error) {
-	if dev.writeError != nil {
-		return 0, dev.writeError
-	}
-	dev.input = append(dev.input, data...)
-	return len(data), nil
-}
-
-func (dev *testWrapperDevice) ReadTimeout(result []byte, timeout int) (int, error) {
-	if dev.readError != nil {
-		return 0, dev.readError
-	}
-	readLength := len(dev.output)
-	copyLength := 0
-	if readLength-dev.readPointer > int(HID_RPT_SIZE) {
-		copyLength = int(HID_RPT_SIZE)
-	} else {
-		copyLength = readLength - dev.readPointer
-	}
-	copy(result[0:copyLength], dev.output[dev.readPointer:dev.readPointer+copyLength])
-	dev.readPointer += copyLength
-	return copyLength, nil
-}
-
-func (dev *testWrapperDevice) Open() error {
-	return dev.openError
-}
-
-func (dev *testWrapperDevice) Close() {
-}
-
 func TestOpen(t *testing.T) {
-	baseDevice := &testWrapperDevice{}
-	dev := newHidDevice(baseDevice)
-	dev.randReader = bytes.NewBuffer([]byte{1, 2, 3, 4, 5, 6, 7, 8})
-
 	// Test error handling for open
+	baseDevice, dev := testDevice()
 	baseDevice.openError = fmt.Errorf("open error")
 	if dev.Open() == nil {
 		t.Errorf("Expected error but got nil")
 	}
 
+	// Test error handling from rand reader
+	baseDevice, dev = testDevice()
+	dev.randReader = &errorReader{err: fmt.Errorf("Error from random")}
+	if dev.Open() == nil {
+		t.Errorf("Expected error but got nil")
+	}
+
+	// Test error handling when writing
+	baseDevice, dev = testDevice()
+	dev.randReader = bytes.NewBuffer([]byte{1, 2, 3, 4, 5, 6, 7, 8})
+	baseDevice.writeError = fmt.Errorf("Error writing")
+	if dev.Open() == nil {
+		t.Errorf("Expected error but got nil")
+	}
+
 	// Test that the channel id is initialized correctly.
-	baseDevice.openError = nil
+	baseDevice, dev = testDevice()
+	dev.randReader = bytes.NewBuffer([]byte{1, 2, 3, 4, 5, 6, 7, 8})
 	// output1 won't match the nonce 1,2,3,4,5,6,7,8
 	output1 := []byte{0xff, 0xff, 0xff, 0xff, 0x86, 0, 12, 1, 2, 2, 2, 5, 6, 7, 8, 6, 7, 8, 9}
 	// but output2 does
@@ -253,4 +226,59 @@ func makeRange(min, max byte) []byte {
 		value++
 	}
 	return a
+}
+
+type testWrapperDevice struct {
+	input       []byte
+	output      []byte
+	readPointer int
+	openError   error
+	readError   error
+	writeError  error
+}
+
+func (dev *testWrapperDevice) Write(data []byte) (int, error) {
+	if dev.writeError != nil {
+		return 0, dev.writeError
+	}
+	dev.input = append(dev.input, data...)
+	return len(data), nil
+}
+
+func (dev *testWrapperDevice) ReadTimeout(result []byte, timeout int) (int, error) {
+	if dev.readError != nil {
+		return 0, dev.readError
+	}
+	readLength := len(dev.output)
+	copyLength := 0
+	if readLength-dev.readPointer > int(HID_RPT_SIZE) {
+		copyLength = int(HID_RPT_SIZE)
+	} else {
+		copyLength = readLength - dev.readPointer
+	}
+	copy(result[0:copyLength], dev.output[dev.readPointer:dev.readPointer+copyLength])
+	dev.readPointer += copyLength
+	return copyLength, nil
+}
+
+func (dev *testWrapperDevice) Open() error {
+	return dev.openError
+}
+
+func (dev *testWrapperDevice) Close() {
+}
+
+// io.Reader that always returns an error
+type errorReader struct {
+	err error
+}
+
+func (r *errorReader) Read(b []byte) (int, error) {
+	fmt.Println("returning error", r.err)
+	return 0, r.err
+}
+
+func testDevice() (*testWrapperDevice, *HidDevice) {
+	baseDevice := &testWrapperDevice{}
+	return baseDevice, newHidDevice(baseDevice)
 }
