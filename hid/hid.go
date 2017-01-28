@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 
+	butil "github.com/marshallbrekka/go-u2fhost/bytes"
 	"github.com/marshallbrekka/go.hid"
-	butil "github.com/marshallbrekka/u2fhost/bytes"
 )
 
 const TYPE_INIT uint8 = 0x80

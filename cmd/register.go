@@ -6,7 +6,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	u2f "github.com/marshallbrekka/u2fhost"
+	u2f "github.com/marshallbrekka/go-u2fhost"
 	"github.com/spf13/cobra"
 )
 

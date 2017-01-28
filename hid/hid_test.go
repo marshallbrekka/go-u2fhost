@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	butil "github.com/marshallbrekka/u2fhost/bytes"
+	butil "github.com/marshallbrekka/go-u2fhost/bytes"
 )
 
 type testWrapperDevice struct {
