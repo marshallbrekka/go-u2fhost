@@ -12,6 +12,9 @@ import (
 	"github.com/marshallbrekka/go.hid"
 )
 
+// The HID message structure is defined at the following url.
+// https://fidoalliance.org/specs/fido-u2f-v1.1-id-20160915/fido-u2f-hid-protocol-v1.1-id-20160915.html
+
 const TYPE_INIT uint8 = 0x80
 const HID_RPT_SIZE uint16 = 64
 

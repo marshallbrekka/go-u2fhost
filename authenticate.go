@@ -19,7 +19,8 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 	if req.CheckOnly {
 		authModifier = u2fAuthCheckOnly
 	}
-	status, response, err := dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0x00, request)
+	status, response, err := dev.hidDevice.SendAPDU(
+		u2fCommandAuthenticate, authModifier, 0, request)
 	return authenticateResponse(status, response, clientData, req.KeyHandle, err)
 }
 

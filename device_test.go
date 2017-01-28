@@ -5,37 +5,6 @@ import (
 	"testing"
 )
 
-// Implement hid.Device interface
-type testDevice struct {
-	// apdu request params
-	instruction uint8
-	p1          uint8
-	p2          uint8
-	request     []byte
-
-	// apdu response elements
-	status   uint16
-	response []byte
-	error    error
-
-	// open error
-	openError error
-}
-
-func (d *testDevice) Open() error {
-	return d.openError
-}
-
-func (d *testDevice) Close() {}
-
-func (d *testDevice) SendAPDU(instruction, p1, p2 uint8, data []byte) (uint16, []byte, error) {
-	d.instruction = instruction
-	d.p1 = p1
-	d.p2 = p2
-	d.request = data
-	return d.status, d.response, d.error
-}
-
 func TestOpen(t *testing.T) {
 	testHid := &testDevice{}
 	dev := newHidDevice(testHid)

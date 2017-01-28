@@ -2,74 +2,98 @@ package u2fhost
 
 import (
 	"encoding/hex"
-	"fmt"
 	"testing"
 )
 
-func TestAuthenticateRequest(t *testing.T) {
-	keyHandle := "mykeyhandle"
-	cidPubKey := JSONWebKey{
-		Kty: "EC",
-		Crv: "P-256",
-		X:   "HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8",
-		Y:   "XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4",
+func TestAuthenticate(t *testing.T) {
+	var response *AuthenticateResponse
+	var err error
+	testHid, dev := newTestDevice()
+
+	// Error case
+	authRequest := sampleAuthenticateRequest()
+	authRequest.ChannelIdUnused = true
+	response, err = dev.Authenticate(authRequest)
+	if err == nil {
+		t.Errorf("Expected error, but did not get one")
 	}
 
-	clientDataHash := "ccd6ee2e47baef244d49a222db496bad0ef5b6f93aa7cc4d30c4821b3b9dbc57"
-	appIdHash := "4b0be934baebb5d12d26011b69227fa5e86df94e7d94aa2949a89f2d493992ca"
-	authRequest := &AuthenticateRequest{
-		Challenge:          "opsXqUifDriAAmWclinfbS0e-USY0CgyJHe_Otd7z8o",
-		Facet:              "http://example.com",
-		AppId:              "https://gstatic.com/securitykey/a/example.com",
-		KeyHandle:          websafeEncode([]byte(keyHandle)),
-		ChannelIdPublicKey: &cidPubKey,
-	}
-	expectedRequest := clientDataHash + appIdHash + hex.EncodeToString([]byte{11}) + hex.EncodeToString([]byte(keyHandle))
-	expectedJson := "{\"typ\":\"navigator.id.getAssertion\",\"challenge\":\"opsXqUifDriAAmWclinfbS0e-USY0CgyJHe_Otd7z8o\",\"cid_pubkey\":{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8\",\"y\":\"XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4\"},\"origin\":\"http://example.com\"}"
-	clientJson, request, err := authenticateRequest(authRequest)
+	// Happy path
+	testHid.response = []byte{1, 2, 3, 4}
+	testHid.status = u2fStatusNoError
+	authRequest = sampleAuthenticateRequest()
+	response, err = dev.Authenticate(authRequest)
 	if err != nil {
-		t.Errorf("Error constructing authenticate request: %s", err)
+		t.Errorf("Unexpected error calling Authenticate: %s", err)
+	} else {
+		testHid.checkInputs(t, u2fCommandAuthenticate, u2fAuthEnforce, 0, testAuthenticateRequest)
+		expected := sampleAuthenticateResponse("AQIDBA", testAuthenticateClientDataJson)
+		if expected != *response {
+			t.Errorf("Expected response %#v, but got %#v", expected, *response)
+		}
 	}
-	if string(clientJson) != expectedJson {
-		t.Errorf("Expected client json to be %s but got %s", expectedJson, string(clientJson))
+
+	// With auth modifier setting
+	testHid.response = []byte{1, 2, 3, 4}
+	testHid.status = u2fStatusNoError
+	authRequest = sampleAuthenticateRequest()
+	authRequest.CheckOnly = true
+	response, err = dev.Authenticate(authRequest)
+	if err != nil {
+		t.Errorf("Unexpected error calling Authenticate: %s", err)
+	} else {
+		testHid.checkInputs(t, u2fCommandAuthenticate, u2fAuthCheckOnly, 0, testAuthenticateRequest)
 	}
-	requestString := hex.EncodeToString(request)
-	if requestString != expectedRequest {
-		t.Errorf("Expected %s but got %s", expectedRequest, requestString)
+
+	// With bad base64 encoded key handle
+	testHid.response = []byte{1, 2, 3, 4}
+	testHid.status = u2fStatusNoError
+	authRequest = sampleAuthenticateRequest()
+	authRequest.KeyHandle = "i'm not base64 encoded correctly"
+	response, err = dev.Authenticate(authRequest)
+	if err == nil {
+		t.Errorf("Expected base64 key handle error")
+	}
+
+	// Error status code
+	testHid.response = []byte{1, 2, 3, 4}
+	testHid.status = u2fStatusConditionsNotSatisfied
+	authRequest = sampleAuthenticateRequest()
+	response, err = dev.Authenticate(authRequest)
+	if err == nil {
+		t.Errorf("Did not get error calling Register")
+	} else if _, ok := err.(*TestOfUserPresenceRequiredError); !ok {
+		t.Errorf("Expected TestOfUserPresenceRequiredError, but got %#v", err)
 	}
 }
 
-func TestAuthenticateResponse(t *testing.T) {
-	var resp *AuthenticateResponse
-	var err error
+// Sample values are taken from the U2F spec examples
+// https://fidoalliance.org/specs/fido-u2f-v1.1-id-20160915/fido-u2f-raw-message-formats-v1.1-id-20160915.html#authentication-example
+var testAuthenticateClientDataJson = "{\"typ\":\"navigator.id.getAssertion\",\"challenge\":\"opsXqUifDriAAmWclinfbS0e-USY0CgyJHe_Otd7z8o\",\"cid_pubkey\":{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"HzQwlfXX7Q4S5MtCCnZUNBw3RMzPO9tOyWjBqRl4tJ8\",\"y\":\"XVguGFLIZx1fXg3wNqfdbn75hi4-_7-BxhMljw42Ht4\"},\"origin\":\"http://example.com\"}"
+var testAuthenticateClientDataHash = "ccd6ee2e47baef244d49a222db496bad0ef5b6f93aa7cc4d30c4821b3b9dbc57"
+var testAuthenticateAppId = "https://gstatic.com/securitykey/a/example.com"
+var testAuthenticateAppIdHash = "4b0be934baebb5d12d26011b69227fa5e86df94e7d94aa2949a89f2d493992ca"
+var testAuthenticateChallenge = "opsXqUifDriAAmWclinfbS0e-USY0CgyJHe_Otd7z8o"
+var testAuthenticateRequest, _ = hex.DecodeString(
+	testAuthenticateClientDataHash +
+		testAuthenticateAppIdHash +
+		hex.EncodeToString([]byte{11}) +
+		hex.EncodeToString([]byte("mykeyhandle")))
 
-	// Expect to return the error passed in.
-	newError := fmt.Errorf("Error")
-	resp, err = authenticateResponse(u2fStatusNoError, []byte{}, []byte{}, "keyhandle", newError)
-	if err == nil {
-		t.Errorf("Expected an error, but got response %+v", resp)
-	} else if err != newError {
-		t.Errorf("Expected error %s, but got %s", newError, err)
+func sampleAuthenticateRequest() *AuthenticateRequest {
+	return &AuthenticateRequest{
+		Challenge:          testAuthenticateChallenge,
+		Facet:              "http://example.com",
+		AppId:              testAuthenticateAppId,
+		KeyHandle:          websafeEncode([]byte("mykeyhandle")),
+		ChannelIdPublicKey: &cidPubKey,
 	}
+}
 
-	// Expect a U2F error based on the status
-	resp, err = authenticateResponse(u2fStatusConditionsNotSatisfied, []byte{}, []byte{}, "keyhandle", nil)
-	if err == nil {
-		t.Errorf("Expected an error, but got response %+v", resp)
-	} else if _, ok := err.(*TestOfUserPresenceRequiredError); !ok {
-		t.Errorf("Expected an error, but got response %+v", resp)
-	}
-
-	// Expect a valid response
-	expectedResponse := AuthenticateResponse{
-		KeyHandle:     "keyhandle",
-		SignatureData: "AQIDBA",
-		ClientData:    "BQYHCA",
-	}
-	resp, err = authenticateResponse(u2fStatusNoError, []byte{1, 2, 3, 4}, []byte{5, 6, 7, 8}, "keyhandle", nil)
-	if err != nil {
-		t.Errorf("Did not expect an error: %s", err)
-	} else if *resp != expectedResponse {
-		t.Errorf("Expected %+v, but got response %+v", expectedResponse, *resp)
+func sampleAuthenticateResponse(signatureData, clientData string) AuthenticateResponse {
+	return AuthenticateResponse{
+		KeyHandle:     websafeEncode([]byte("mykeyhandle")),
+		SignatureData: signatureData,
+		ClientData:    websafeEncode([]byte(clientData)),
 	}
 }
