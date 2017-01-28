@@ -33,5 +33,5 @@
 			"revisionTime": "2016-12-14T18:38:57Z"
 		}
 	],
-	"rootPath": "github.com/marshallbrekka/u2fhost/cmd"
+	"rootPath": "github.com/marshallbrekka/go-u2fhost/cmd"
 }

@@ -67,19 +67,24 @@ func registerHelper(req *u2f.RegisterRequest, devices []*u2f.HidDevice) *u2f.Reg
 		log.Fatalf("Failed to find any devices")
 	}
 	fmt.Println("\nTouch the U2F device you wish to register...")
-	iterationCount := 0
-	for iterationCount < 100 {
-		for _, device := range openDevices {
-			response, err := device.Register(req)
-			if err != nil {
-				log.Debugf("Got error from device, skipping: %s", err.Error())
-			} else {
-				return response
+	timeout := time.After(time.Second * 25)
+	interval := time.NewTicker(time.Millisecond * 250)
+	for {
+		select {
+		case <-timeout:
+			interval.Stop()
+			fmt.Println("Failed to get registration response after 25 seconds")
+			return nil
+		case <-interval.C:
+			for _, device := range openDevices {
+				response, err := device.Register(req)
+				if err != nil {
+					log.Debugf("Got error from device, skipping: %s", err.Error())
+				} else {
+					return response
+				}
 			}
 		}
-		iterationCount += 1
-		time.Sleep(250 * time.Millisecond)
 	}
-	log.Fatalf("Failed to get registration response after 25 seconds")
 	return nil
 }

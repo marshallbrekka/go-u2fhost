@@ -49,23 +49,30 @@ Once you have a slice of open devices, repeatedly call the `Register` function u
 fmt.Println("\nTouch the U2F device you wish to register...")
 var response RegisterResponse
 var err error
-iterationCount := 0
-for iterationCount < 100 {
-	for _, device := range openDevices {
-		response, err := device.Register(req)
-		if err != nil {
-			if _, ok := err.(TestOfUserPresenceRequiredError); ok {
-				continue
+timeout := time.After(time.Second * 25)
+interval := time.NewTicker(time.Millisecond * 250)
+defer interval.Stop()
+for {
+    select {
+    case <-timeout:
+        interval.Stop()
+		fmt.Println("Failed to get registration response after 25 seconds")
+		break
+    case <-interval:
+		for _, device := range openDevices {
+			response, err := device.Register(req)
+			if err != nil {
+				if _, ok := err.(TestOfUserPresenceRequiredError); ok {
+					continue
+				} else {
+					// you should handle errors more gracefully than this
+					panic(err)
+				}
 			} else {
-				// you should handle errors more gracefully than this
-				panic(err)
+				return response
 			}
-		} else {
-			return response
 		}
-	}
-	iterationCount += 1
-	time.Sleep(250 * time.Millisecond)
+    }
 }
 ```
 
@@ -108,30 +115,43 @@ for i, device := range devices {
 Once you have a slice of open devices, repeatedly call the `Authenticate` function until the user activates a device, or you time out waiting for the user.
 
 ```go
-iterationCount := 0
 prompted := false
-for iterationCount < 100 {
-	for _, device := range openDevices {
-		response, err := device.Authenticate(req)
-		if err == nil {
-			return response
-			log.Debugf("Got error from device, skipping: %s", err.Error())
-		} else if _, ok := err.(TestOfUserPresenceRequiredError); ok && !prompted {
-			fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
-			prompted = true
-		} else {
-			fmt.Printf("Got status response %#x\n", err)
+timeout := time.After(time.Second * 25)
+interval := time.NewTicker(time.Millisecond * 250)
+defer interval.Stop()
+for {
+    select {
+	case <-timeout:
+		fmt.Println("Failed to get authentication response after 25 seconds")
+		return nil
+	case <-interval.C:
+		for _, device := range openDevices {
+			response, err := device.Authenticate(req)
+			if err == nil {
+				return response
+				log.Debugf("Got error from device, skipping: %s", err.Error())
+			} else if _, ok := err.(TestOfUserPresenceRequiredError); ok && !prompted {
+				fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
+				prompted = true
+			} else {
+				fmt.Printf("Got status response %#x\n", err)
+			}
 		}
-	}
-	iterationCount += 1
-	time.Sleep(250 * time.Millisecond)
+    }
 }
 ```
 ## Example
 The `cmd` directory contains a sample CLI program that allows you to run the `register` and `authenticate` operations, providing all of the inputs that would normally be provided by the server via command line flags.
 
-## Known Issues
+## Known issues/FAQ
 
-### Does not yet work on linux.
-HID devices can't be identified as the hid library does not expose the usage page.
-There is a known workaround for this (and an issue filed), so it is not something fundamentally wrong with this implementation.
+### What platforms has this been tested on?
+At the moment only Mac OS, however nothing in the go codebase is platform specific, and the hid library supports Mac, Windows, and Linux, so in theory it should work on all platforms.
+
+There is a known issue that prevents HID devices from being identified on Linux, as the hid library does not expose the usage page.
+There is a known workaround for this (and an issue filed), so it is not something fundamentally wrong with this implementation, and should be resolved in the near future.
+
+### The interface seems too low level, why isn't it easier to use?
+Mostly because I wasn't sure what a good high level API would look like, and opted to provide a more general purpose low level API.
+
+That said, in the future I may add a high level API similar to the JavaScript U2F API.

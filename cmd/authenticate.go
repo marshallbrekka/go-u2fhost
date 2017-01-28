@@ -72,23 +72,28 @@ func authenticateHelper(req *u2f.AuthenticateRequest, devices []*u2f.HidDevice) 
 	if len(openDevices) == 0 {
 		log.Fatalf("Failed to find any devices")
 	}
-	iterationCount := 0
 	prompted := false
-	for iterationCount < 100 {
-		for _, device := range openDevices {
-			response, err := device.Authenticate(req)
-			if err == nil {
-				return response
-			} else if _, ok := err.(u2f.TestOfUserPresenceRequiredError); ok && !prompted {
-				fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
-				prompted = true
-			} else {
-				log.Debugf("Got status response %s", err)
+	timeout := time.After(time.Second * 25)
+	interval := time.NewTicker(time.Millisecond * 250)
+	defer interval.Stop()
+	for {
+		select {
+		case <-timeout:
+			fmt.Println("Failed to get authentication response after 25 seconds")
+			return nil
+		case <-interval.C:
+			for _, device := range openDevices {
+				response, err := device.Authenticate(req)
+				if err == nil {
+					return response
+				} else if _, ok := err.(u2f.TestOfUserPresenceRequiredError); ok && !prompted {
+					fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
+					prompted = true
+				} else {
+					log.Debugf("Got status response %s", err)
+				}
 			}
 		}
-		iterationCount += 1
-		time.Sleep(250 * time.Millisecond)
 	}
-	log.Fatalf("Failed to get authentication response after 25 seconds")
 	return nil
 }
