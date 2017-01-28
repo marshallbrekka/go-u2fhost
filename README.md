@@ -55,7 +55,6 @@ defer interval.Stop()
 for {
     select {
     case <-timeout:
-        interval.Stop()
 		fmt.Println("Failed to get registration response after 25 seconds")
 		break
     case <-interval:
@@ -87,11 +86,11 @@ request := &AuthenticateRequest{
 	// The challenge is provided by the server
 	Challenge: "randomstringprovidedbytheserver",
 	 // "The facet should be provided by the client making the request
-	Facet:	 authenticateFacet,
+	Facet:	 "https://example.com",
 	// "The AppId may be provided by the server or the client client making the request.
-	AppId:	 authenticateAppId,
+	AppId:	 "https://example.com",
 	// The KeyHandle is provided by the server
-	KeyHandle: string(keyHandle),
+	KeyHandle: "keyhandleprovidedbytheserver",
 }
 ```
 
@@ -123,13 +122,13 @@ for {
     select {
 	case <-timeout:
 		fmt.Println("Failed to get authentication response after 25 seconds")
-		return nil
+		break
 	case <-interval.C:
 		for _, device := range openDevices {
 			response, err := device.Authenticate(req)
 			if err == nil {
 				return response
-				log.Debugf("Got error from device, skipping: %s", err.Error())
+				log.Debugf("Got error from device, skipping: %s", err)
 			} else if _, ok := err.(TestOfUserPresenceRequiredError); ok && !prompted {
 				fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
 				prompted = true
@@ -154,4 +153,4 @@ There is a known workaround for this (and an issue filed), so it is not somethin
 ### The interface seems too low level, why isn't it easier to use?
 Mostly because I wasn't sure what a good high level API would look like, and opted to provide a more general purpose low level API.
 
-That said, in the future I may add a high level API similar to the JavaScript U2F API.
+That said, in the future I may add a high level API similar to the Javascript U2F API.
