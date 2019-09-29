@@ -41,10 +41,10 @@ type baseDevice interface {
 // Returns an array of available HID devices.
 func Devices() []*HidDevice {
 	u2fDevices := []*HidDevice{}
-	for _, device := range hid.Enumerate(0x0, 0x0) {
-		dev := &device
-		if dev.UsagePage == 0xf1d0 && dev.Usage == 1 {
-			u2fDevices = append(u2fDevices, newHidDevice(newRawHidDevice(dev)))
+	devices := hid.Enumerate(0x0, 0x0)
+	for i, device := range devices {
+		if device.UsagePage == 0xf1d0 && device.Usage == 1 {
+			u2fDevices = append(u2fDevices, newHidDevice(newRawHidDevice(&devices[i])))
 		}
 	}
 	return u2fDevices
