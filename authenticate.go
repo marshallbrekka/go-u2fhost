@@ -1,6 +1,7 @@
 package u2fhost
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -21,18 +22,29 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 	}
 	status, response, err := dev.hidDevice.SendAPDU(
 		u2fCommandAuthenticate, authModifier, 0, request)
-	return authenticateResponse(status, response, clientData, req.KeyHandle, err)
+	return authenticateResponse(status, response, clientData, req.KeyHandle, req.AppId, req.WebAuthn, err)
 }
 
-func authenticateResponse(status uint16, response, clientData []byte, keyHandle string, err error) (*AuthenticateResponse, error) {
+func authenticateResponse(status uint16, response, clientData []byte, keyHandle string, appID string, webAuthn bool, err error) (*AuthenticateResponse, error) {
 	var authenticateResponse *AuthenticateResponse
 	if err == nil {
 		if status == u2fStatusNoError {
-			authenticateResponse = &AuthenticateResponse{
-				KeyHandle:     keyHandle,
-				ClientData:    websafeEncode(clientData),
-				SignatureData: websafeEncode(response),
+			if webAuthn {
+				authenticatorData := append(sha256([]byte(appID)), response[0:5]...)
+				authenticateResponse = &AuthenticateResponse{
+					KeyHandle:         keyHandle,
+					ClientData:        websafeEncode(clientData),
+					SignatureData:     base64.StdEncoding.EncodeToString(response[5:]),
+					AuthenticatorData: base64.StdEncoding.EncodeToString(authenticatorData),
+				}
+			} else {
+				authenticateResponse = &AuthenticateResponse{
+					KeyHandle:     keyHandle,
+					ClientData:    websafeEncode(clientData),
+					SignatureData: websafeEncode(response),
+				}
 			}
+
 		} else {
 			err = u2ferror(status)
 		}
@@ -52,12 +64,19 @@ func authenticateRequest(req *AuthenticateRequest) ([]byte, []byte, error) {
 	if err != nil {
 		return []byte{}, []byte{}, fmt.Errorf("base64 key handle: %s", err)
 	}
+
 	client := clientData{
-		Type:               "navigator.id.getAssertion",
 		Challenge:          req.Challenge,
 		Origin:             req.Facet,
 		ChannelIdPublicKey: cid,
 	}
+
+	if req.WebAuthn {
+		client.Type = "webauthn.get"
+	} else {
+		client.Typ = "navigator.id.getAssertion"
+	}
+
 	clientJson, err := json.Marshal(client)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error marshaling clientData to json: %s", err)
