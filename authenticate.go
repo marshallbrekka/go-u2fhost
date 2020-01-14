@@ -20,36 +20,63 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 	if req.CheckOnly {
 		authModifier = u2fAuthCheckOnly
 	}
-	status, response, err := dev.hidDevice.SendAPDU(
-		u2fCommandAuthenticate, authModifier, 0, request)
-	return authenticateResponse(status, response, clientData, req.KeyHandle, req.AppId, req.WebAuthn, err)
-}
 
-func authenticateResponse(status uint16, response, clientData []byte, keyHandle string, appID string, webAuthn bool, err error) (*AuthenticateResponse, error) {
-	var authenticateResponse *AuthenticateResponse
-	if err == nil {
+	status, response, err := dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0, request)
+	if err != nil {
+		return nil, err
+	}
+
+	if status == u2fStatusNoError {
+		response := authenticateResponse(status, response, clientData, req)
+
+		// Clear out the authenticator data if the original request was not webauthn.
+		if !req.WebAuthn {
+			response.AuthenticatorData = ""
+		}
+		return response, nil
+	}
+
+	// If we are in webauthn mode, try a backwards compatible mode for u2f
+	if req.WebAuthn && status == u2fStatusWrongData {
+		u2fReq := *req
+		u2fReq.WebAuthn = false
+		u2fReq.AppId = "https://" + req.AppId
+		clientData, request, err = authenticateRequest(&u2fReq)
+
+		if err != nil {
+			return nil, err
+		}
+
+		status, response, err := dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0, request)
+		if err != nil {
+			return nil, err
+		}
+
 		if status == u2fStatusNoError {
-			if webAuthn {
-				authenticatorData := append(sha256([]byte(appID)), response[0:5]...)
-				authenticateResponse = &AuthenticateResponse{
-					KeyHandle:         keyHandle,
-					ClientData:        websafeEncode(clientData),
-					SignatureData:     base64.StdEncoding.EncodeToString(response[5:]),
-					AuthenticatorData: base64.StdEncoding.EncodeToString(authenticatorData),
-				}
-			} else {
-				authenticateResponse = &AuthenticateResponse{
-					KeyHandle:     keyHandle,
-					ClientData:    websafeEncode(clientData),
-					SignatureData: websafeEncode(response),
-				}
-			}
-
-		} else {
-			err = u2ferror(status)
+			return authenticateResponse(status, response, clientData, &u2fReq), nil
 		}
 	}
-	return authenticateResponse, err
+
+	return nil, u2ferror(status)
+}
+
+func authenticateResponse(status uint16, response, clientData []byte, req *AuthenticateRequest) *AuthenticateResponse {
+	authenticatorData := append(sha256([]byte(req.AppId)), response[0:5]...)
+	if req.WebAuthn {
+		return &AuthenticateResponse{
+			KeyHandle:         req.KeyHandle,
+			ClientData:        websafeEncode(clientData),
+			SignatureData:     base64.StdEncoding.EncodeToString(response[5:]),
+			AuthenticatorData: base64.StdEncoding.EncodeToString(authenticatorData),
+		}
+	} else {
+		return &AuthenticateResponse{
+			KeyHandle:         req.KeyHandle,
+			ClientData:        websafeEncode(clientData),
+			SignatureData:     websafeEncode(response),
+			AuthenticatorData: base64.StdEncoding.EncodeToString(authenticatorData),
+		}
+	}
 }
 
 func authenticateRequest(req *AuthenticateRequest) ([]byte, []byte, error) {
