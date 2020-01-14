@@ -19,7 +19,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	// Happy path
-	testHid.response = []byte{1, 2, 3, 4}
+	testHid.response = []byte{1, 2, 3, 4, 5}
 	testHid.status = u2fStatusNoError
 	authRequest = sampleAuthenticateRequest()
 	response, err = dev.Authenticate(authRequest)
@@ -27,14 +27,14 @@ func TestAuthenticate(t *testing.T) {
 		t.Errorf("Unexpected error calling Authenticate: %s", err)
 	} else {
 		testHid.checkInputs(t, u2fCommandAuthenticate, u2fAuthEnforce, 0, testAuthenticateRequest)
-		expected := sampleAuthenticateResponse("AQIDBA", testAuthenticateClientDataJson)
+		expected := sampleAuthenticateResponse("AQIDBAU", testAuthenticateClientDataJson)
 		if expected != *response {
 			t.Errorf("Expected response %#v, but got %#v", expected, *response)
 		}
 	}
 
 	// With auth modifier setting
-	testHid.response = []byte{1, 2, 3, 4}
+	testHid.response = []byte{1, 2, 3, 4, 5}
 	testHid.status = u2fStatusNoError
 	authRequest = sampleAuthenticateRequest()
 	authRequest.CheckOnly = true
@@ -46,7 +46,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	// With bad base64 encoded key handle
-	testHid.response = []byte{1, 2, 3, 4}
+	testHid.response = []byte{1, 2, 3, 4, 5}
 	testHid.status = u2fStatusNoError
 	authRequest = sampleAuthenticateRequest()
 	authRequest.KeyHandle = "i'm not base64 encoded correctly"
@@ -56,7 +56,7 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	// Error status code
-	testHid.response = []byte{1, 2, 3, 4}
+	testHid.response = []byte{1, 2, 3, 4, 5}
 	testHid.status = u2fStatusConditionsNotSatisfied
 	authRequest = sampleAuthenticateRequest()
 	response, err = dev.Authenticate(authRequest)
