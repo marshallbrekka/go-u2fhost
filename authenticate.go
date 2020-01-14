@@ -47,7 +47,7 @@ func (dev *HidDevice) Authenticate(req *AuthenticateRequest) (*AuthenticateRespo
 			return nil, err
 		}
 
-		status, response, err := dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0, request)
+		status, response, err = dev.hidDevice.SendAPDU(u2fCommandAuthenticate, authModifier, 0, request)
 		if err != nil {
 			return nil, err
 		}
