@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	u2f "github.com/marshallbrekka/go-u2fhost"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
