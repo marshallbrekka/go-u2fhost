@@ -4,7 +4,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/marshallbrekka/go-u2fhost
     docker:
-      - image: golang:1.11
+      - image: golang:1.14
     steps:
       - checkout
       - run:
