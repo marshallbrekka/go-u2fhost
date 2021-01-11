@@ -150,6 +150,10 @@ At the moment only Mac OS, however nothing in the go codebase is platform specif
 ### Linux
 If you are using a linux device you need to add [these udev rules](https://github.com/Yubico/libu2f-host/blob/master/70-u2f.rules).
 
+To enable support for discovering USB HID devices on Linux, `go build` needs to be passed `-tags=hidraw`. This will build the `bearsh/hid` package with the `hidraw` backend for `hidapi`, instead of the default `libusb` used in previous versions and used by default when no tags are passed.
+[Changes in the upstream libusb HIDAPI library](https://github.com/libusb/hidapi/pull/139/files) have made it possible to return Usage Page and Usage on Linux and so address [issue #1](https://github.com/marshallbrekka/go-u2fhost/issues/1), but this only works with hidraw.
+Linux packages, therefore, should be built with `-tags=hidraw`.
+
 ### The interface seems too low level, why isn't it easier to use?
 Mostly because I wasn't sure what a good high level API would look like, and opted to provide a more general purpose low level API.
 
