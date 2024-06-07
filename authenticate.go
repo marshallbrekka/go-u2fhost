@@ -109,10 +109,20 @@ func authenticateRequest(req *AuthenticateRequest) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("Error marshaling clientData to json: %s", err)
 	}
 
+	var challengeHash []byte
+	if req.RawChallenge {
+		challengeHash, err = websafeDecode(req.Challenge)
+		if err != nil {
+			return []byte{}, []byte{}, fmt.Errorf("base64 challenge: %s", err)
+		}
+	} else {
+		challengeHash = sha256(clientJson)
+	}
+
 	// Pack into byte array
 	// https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#authentication-request-message---u2f_authenticate
 	request := butil.Concat(
-		sha256(clientJson),
+		challengeHash,
 		sha256([]byte(req.AppId)),
 		[]byte{byte(len(keyHandle))},
 		keyHandle,

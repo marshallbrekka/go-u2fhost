@@ -76,6 +76,10 @@ type AuthenticateRequest struct {
 	// Optional boolean (defaults to false) to use WebAuthn authentication with U2f
 	// devices
 	WebAuthn bool
+
+	// Optional boolean (defaults to false) that indicates the Challenge string is a raw
+	// base64 websafe SHA256 hash that should be used directly as the authentication challenge
+	RawChallenge bool
 }
 
 // A response from an Authenticate operation.
