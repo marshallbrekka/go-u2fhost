@@ -86,7 +86,7 @@ func authenticateHelper(req *u2f.AuthenticateRequest, devices []*u2f.HidDevice) 
 				response, err := device.Authenticate(req)
 				if err == nil {
 					return response
-				} else if _, ok := err.(u2f.TestOfUserPresenceRequiredError); ok && !prompted {
+				} else if _, ok := err.(*u2f.TestOfUserPresenceRequiredError); ok && !prompted {
 					fmt.Println("\nTouch the flashing U2F device to authenticate...")
 					prompted = true
 				} else {

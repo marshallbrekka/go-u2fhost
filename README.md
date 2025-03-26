@@ -61,7 +61,7 @@ for {
 		for _, device := range openDevices {
 			response, err := device.Register(req)
 			if err != nil {
-				if _, ok := err.(TestOfUserPresenceRequiredError); ok {
+				if _, ok := err.(*TestOfUserPresenceRequiredError); ok {
 					continue
 				} else {
 					// you should handle errors more gracefully than this
@@ -129,7 +129,7 @@ for {
 			if err == nil {
 				return response
 				log.Debugf("Got error from device, skipping: %s", err)
-			} else if _, ok := err.(TestOfUserPresenceRequiredError); ok && !prompted {
+			} else if _, ok := err.(*TestOfUserPresenceRequiredError); ok && !prompted {
 				fmt.Println("\nTouch the flashing U2F device to authenticate...\n")
 				prompted = true
 			} else {
